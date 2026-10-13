@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cse-svec.vercel.app/sitemap.xml
