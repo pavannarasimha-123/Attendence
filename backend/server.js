@@ -5,6 +5,9 @@ const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { HttpsProxyAgent } = require('https-proxy-agent');
+
+// Load environment from backend/.env or root .env
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config();
 
 const app = express();
@@ -32,6 +35,36 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
+// --- COLUMN NAME NORMALIZERS ---
+const ROLL_KEYS = ['Roll NO', 'Roll No', 'Roll No.', 'Roll number', 'Rollnumber', 'rollNo', 'RollNumber', 'Roll', 'roll'];
+const NAME_KEYS = ['Name', 'name', 'Student Name', 'Full Name'];
+const BRANCH_KEYS = ['Branch', 'branch', 'Dept', 'Department'];
+const SEM_KEYS = ['Semester', 'semester', 'Sem', 'sem'];
+const SEC_KEYS = ['Section', 'section', 'Sec', 'sec'];
+const STATUS_KEYS = ['isPresent', 'ispresent', 'IsPresent', 'Status', 'status'];
+
+function getField(row, keys) {
+  if (!row) return '';
+  for (const k of keys) {
+    if (typeof row.get === 'function') {
+      const v = row.get(k);
+      if (v !== undefined && v !== null && v !== '') return v;
+    } else if (row[k] !== undefined && row[k] !== null && row[k] !== '') {
+      return row[k];
+    }
+  }
+  return '';
+}
+
+function findHeaderKey(headerValues, candidates) {
+  if (!Array.isArray(headerValues)) return candidates[0];
+  for (const cand of candidates) {
+    const found = headerValues.find(h => h.toString().trim().toLowerCase() === cand.toLowerCase());
+    if (found) return found;
+  }
+  return candidates[0];
+}
+
 // --- STORAGE MODE CONFIGURATION ---
 const hasGoogleCreds = Boolean(
   process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
@@ -50,12 +83,10 @@ const DATA_DIR = path.join(__dirname, 'data');
 const LOCAL_DB_PATH = path.join(DATA_DIR, 'students.json');
 const DEFAULT_STUDENTS_PATH = path.join(DATA_DIR, 'defaultStudents.json');
 
-// Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Initialize local DB if needed
 function initLocalDb() {
   if (!fs.existsSync(LOCAL_DB_PATH)) {
     if (fs.existsSync(DEFAULT_STUDENTS_PATH)) {
@@ -121,16 +152,14 @@ if (!isLocalStorageMode) {
 }
 
 /**
- * Ensures Google Sheet is loaded (if running in Sheets mode)
+ * Ensures Google Sheet is loaded
  */
 async function ensureDocLoaded() {
   if (isLocalStorageMode) return;
   try {
     try {
       if (doc.sheetCount > 0) return;
-    } catch (e) {
-      // Info not loaded yet, proceed
-    }
+    } catch (e) {}
 
     console.log('[SHEET] Initializing connection...');
     await doc.loadInfo();
@@ -158,8 +187,8 @@ const queue = [];
 let cachedRows = null;
 let studentMap = new Map();
 let lastCacheUpdate = 0;
-const CACHE_TTL = 30000; // 30 seconds for general data
-const SCAN_CACHE_TTL = 5000; // 5 seconds during active scanning
+const CACHE_TTL = 30000;
+const SCAN_CACHE_TTL = 5000;
 
 async function withLock(fn, timeoutMs = 15000) {
   if (queue.length > 10) {
@@ -239,7 +268,7 @@ async function getCachedRows(forceRefresh = false, customTtl = CACHE_TTL) {
     const students = getLocalStudents();
     const newMap = new Map();
     students.forEach(student => {
-      const roll = student.rollNo || student.Rollnumber;
+      const roll = getField(student, ROLL_KEYS);
       if (roll) {
         newMap.set(roll.toString().trim().toLowerCase(), student);
       }
@@ -257,7 +286,7 @@ async function getCachedRows(forceRefresh = false, customTtl = CACHE_TTL) {
 
   const newMap = new Map();
   rows.forEach(row => {
-    const roll = row.get('Rollnumber') || row.get('Roll Number') || row.get('rollNo');
+    const roll = getField(row, ROLL_KEYS);
     if (roll) {
       newMap.set(roll.toString().trim().toLowerCase(), row);
     }
@@ -312,7 +341,7 @@ app.post('/api/mark-attendance', async (req, res) => {
       if (isLocalStorageMode) {
         const students = getLocalStudents();
         const studentIndex = students.findIndex(s =>
-          (s.rollNo || s.Rollnumber || '').toString().trim().toLowerCase() === cleanRoll
+          getField(s, ROLL_KEYS).toString().trim().toLowerCase() === cleanRoll
         );
 
         if (studentIndex === -1) {
@@ -326,12 +355,13 @@ app.post('/api/mark-attendance', async (req, res) => {
         }
 
         const student = students[studentIndex];
+        const currentStatus = getField(student, STATUS_KEYS);
         const isAlreadyPresent = (
-          student.isPresent === true ||
-          student.isPresent === 'TRUE' ||
-          student.isPresent === 'Present' ||
-          String(student.isPresent).toLowerCase() === 'true' ||
-          String(student.isPresent).toLowerCase() === 'yes'
+          currentStatus === true ||
+          currentStatus === 'TRUE' ||
+          currentStatus === 'Present' ||
+          String(currentStatus).toLowerCase() === 'true' ||
+          String(currentStatus).toLowerCase() === 'yes'
         );
 
         if (isAlreadyPresent) {
@@ -340,11 +370,11 @@ app.post('/api/mark-attendance', async (req, res) => {
             message: 'Already marked present',
             queueDepth: currentQueueDepth,
             student: {
-              name: student.name || student.Name,
-              rollNo: student.rollNo || student.Rollnumber,
-              branch: student.branch || student.Branch,
-              semester: student.semester || student.Semester,
-              section: student.section || student.Section
+              name: getField(student, NAME_KEYS),
+              rollNo: getField(student, ROLL_KEYS),
+              branch: getField(student, BRANCH_KEYS),
+              semester: getField(student, SEM_KEYS),
+              section: getField(student, SEC_KEYS)
             }
           });
         }
@@ -352,17 +382,17 @@ app.post('/api/mark-attendance', async (req, res) => {
         console.log(`[API] Saving status for ${rollNo} in local DB...`);
         students[studentIndex].isPresent = true;
         saveLocalStudents(students);
-        lastCacheUpdate = 0; // invalidate cache
+        lastCacheUpdate = 0;
 
         return res.status(200).json({
           message: 'Marked Present',
           queueDepth: currentQueueDepth,
           student: {
-            name: student.name || student.Name,
-            rollNo: student.rollNo || student.Rollnumber,
-            branch: student.branch || student.Branch,
-            semester: student.semester || student.Semester,
-            section: student.section || student.Section
+            name: getField(student, NAME_KEYS),
+            rollNo: getField(student, ROLL_KEYS),
+            branch: getField(student, BRANCH_KEYS),
+            semester: getField(student, SEM_KEYS),
+            section: getField(student, SEC_KEYS)
           }
         });
       }
@@ -381,7 +411,7 @@ app.post('/api/mark-attendance', async (req, res) => {
         });
       }
 
-      const currentStatus = studentRow.get('isPresent');
+      const currentStatus = getField(studentRow, STATUS_KEYS);
       const isAlreadyPresent = (
         currentStatus === 'TRUE' ||
         currentStatus === 'Present' ||
@@ -396,17 +426,19 @@ app.post('/api/mark-attendance', async (req, res) => {
           message: 'Already marked present',
           queueDepth: currentQueueDepth,
           student: {
-            name: studentRow.get('Name'),
-            rollNo: studentRow.get('Rollnumber'),
-            branch: studentRow.get('Branch'),
-            semester: studentRow.get('semester') || studentRow.get('Semester'),
-            section: studentRow.get('Section') || studentRow.get('section')
+            name: getField(studentRow, NAME_KEYS),
+            rollNo: getField(studentRow, ROLL_KEYS),
+            branch: getField(studentRow, BRANCH_KEYS),
+            semester: getField(studentRow, SEM_KEYS),
+            section: getField(studentRow, SEC_KEYS)
           }
         });
       }
 
       console.log(`[API] Saving status for ${rollNo} to Google Sheets...`);
-      studentRow.set('isPresent', 'TRUE');
+      await doc.sheetsByIndex[0].loadHeaderRow();
+      const statusKey = findHeaderKey(doc.sheetsByIndex[0].headerValues, STATUS_KEYS);
+      studentRow.set(statusKey, 'TRUE');
       await studentRow.save();
 
       lastCacheUpdate = 0; // Invalidate cache
@@ -415,11 +447,11 @@ app.post('/api/mark-attendance', async (req, res) => {
         message: 'Marked Present',
         queueDepth: currentQueueDepth,
         student: {
-          name: studentRow.get('Name'),
-          rollNo: studentRow.get('Rollnumber'),
-          branch: studentRow.get('Branch'),
-          semester: studentRow.get('semester') || studentRow.get('Semester'),
-          section: studentRow.get('Section') || studentRow.get('section')
+          name: getField(studentRow, NAME_KEYS),
+          rollNo: getField(studentRow, ROLL_KEYS),
+          branch: getField(studentRow, BRANCH_KEYS),
+          semester: getField(studentRow, SEM_KEYS),
+          section: getField(studentRow, SEC_KEYS)
         }
       });
 
@@ -438,28 +470,25 @@ app.get('/api/attendance', async (req, res) => {
   try {
     const { rows } = await getCachedRows();
 
-    if (isLocalStorageMode) {
-      const students = Array.isArray(rows) ? rows.map(s => ({
-        name: s.name || s.Name || 'Unknown',
-        rollNo: s.rollNo || s.Rollnumber || 'N/A',
-        branch: s.branch || s.Branch || 'N/A',
-        year: s.year || s['Year of Study'] || s.Year || '',
-        semester: s.semester || s.Semester || s.Sem || '',
-        section: s.section || s.Section || '',
-        isPresent: s.isPresent === true || s.isPresent === 'TRUE' || s.isPresent === 'Present'
-      })) : [];
-      return res.json(students);
-    }
+    const students = Array.isArray(rows) ? rows.map(row => {
+      const isPresentVal = getField(row, STATUS_KEYS);
+      const isPresent = (
+        isPresentVal === true ||
+        isPresentVal === 'TRUE' ||
+        isPresentVal === 'Present' ||
+        String(isPresentVal).toLowerCase() === 'true'
+      );
 
-    const students = Array.isArray(rows) ? rows.map(row => ({
-      name: row.get('Name') || 'Unknown',
-      rollNo: row.get('Rollnumber') || row.get('Roll Number') || 'N/A',
-      branch: row.get('Branch') || 'N/A',
-      year: row.get('Year of Study') || row.get('Year') || '',
-      semester: row.get('semester') || row.get('Semester') || row.get('Sem') || '',
-      section: row.get('Section') || row.get('section') || '',
-      isPresent: row.get('isPresent') === 'TRUE' || row.get('isPresent') === 'Present' || row.get('isPresent') === true
-    })) : [];
+      return {
+        name: getField(row, NAME_KEYS) || 'Unknown',
+        rollNo: getField(row, ROLL_KEYS) || 'N/A',
+        branch: getField(row, BRANCH_KEYS) || 'N/A',
+        year: getField(row, ['Year of Study', 'Year', 'year']),
+        semester: getField(row, SEM_KEYS) || '',
+        section: getField(row, SEC_KEYS) || '',
+        isPresent
+      };
+    }) : [];
 
     res.json(students);
   } catch (error) {
@@ -490,12 +519,12 @@ app.post('/api/register-student', async (req, res) => {
       if (isLocalStorageMode) {
         const students = getLocalStudents();
         const existing = students.find(s =>
-          (s.rollNo || s.Rollnumber || '').toString().trim().toLowerCase() === cleanRoll.toLowerCase()
+          getField(s, ROLL_KEYS).toString().trim().toLowerCase() === cleanRoll.toLowerCase()
         );
 
         if (existing) {
           return res.status(409).json({
-            error: `Student with Roll Number "${cleanRoll}" already exists (${existing.name || existing.Name}).`
+            error: `Student with Roll Number "${cleanRoll}" already exists (${getField(existing, NAME_KEYS)}).`
           });
         }
 
@@ -510,7 +539,7 @@ app.post('/api/register-student', async (req, res) => {
 
         students.push(newStudent);
         saveLocalStudents(students);
-        lastCacheUpdate = 0; // Invalidate cache
+        lastCacheUpdate = 0;
 
         return res.status(201).json({
           message: markPresent
@@ -531,13 +560,23 @@ app.post('/api/register-student', async (req, res) => {
         });
       }
 
+      await sheet.loadHeaderRow();
+      const headers = sheet.headerValues;
+
+      const rollKey = findHeaderKey(headers, ROLL_KEYS);
+      const nameKey = findHeaderKey(headers, NAME_KEYS);
+      const branchKey = findHeaderKey(headers, BRANCH_KEYS);
+      const semKey = findHeaderKey(headers, SEM_KEYS);
+      const secKey = findHeaderKey(headers, SEC_KEYS);
+      const statusKey = findHeaderKey(headers, STATUS_KEYS);
+
       await sheet.addRow({
-        Name: cleanName,
-        Rollnumber: cleanRoll,
-        Branch: cleanBranch,
-        semester: cleanSemester,
-        Section: cleanSection,
-        isPresent: markPresent ? 'TRUE' : ''
+        [nameKey]: cleanName,
+        [rollKey]: cleanRoll,
+        [branchKey]: cleanBranch,
+        [semKey]: cleanSemester,
+        [secKey]: cleanSection,
+        [statusKey]: markPresent ? 'TRUE' : ''
       });
 
       lastCacheUpdate = 0; // Invalidate cache
@@ -622,10 +661,11 @@ app.post('/api/clear-attendance', async (req, res) => {
       const sheet = doc.sheetsByIndex[0];
       await sheet.loadHeaderRow();
       const headers = sheet.headerValues;
-      const isPresentColIndex = headers.indexOf('isPresent');
+      const statusHeader = findHeaderKey(headers, STATUS_KEYS);
+      const isPresentColIndex = headers.indexOf(statusHeader);
 
       if (isPresentColIndex === -1) {
-        throw new Error('Column "isPresent" not found in the sheet.');
+        throw new Error(`Column "${statusHeader}" not found in the sheet.`);
       }
 
       const rows = await sheet.getRows();
@@ -633,7 +673,7 @@ app.post('/api/clear-attendance', async (req, res) => {
         return res.status(200).json({ message: 'No students found to clear.', clearedCount: 0 });
       }
 
-      console.log(`[ADMIN] Bulk clearing isPresent for ${rows.length} rows in Google Sheet...`);
+      console.log(`[ADMIN] Bulk clearing attendance for ${rows.length} rows in Google Sheet...`);
 
       await sheet.loadCells({
         startRowIndex: 1,
