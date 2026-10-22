@@ -1,7 +1,20 @@
 import axios from 'axios';
 
-// Get API URL from environment variables or default to localhost, ensuring no trailing slash
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').trim().replace(/\/+$/, '');
+// Smart API URL detection:
+// 1. Explicit VITE_API_URL if provided
+// 2. http://localhost:3000 if running in local Vite dev server (port 5173)
+// 3. Relative path (empty string) in production when deployed together on Render
+const getBaseUrl = () => {
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL.trim().replace(/\/+$/, '');
+    }
+    if (typeof window !== 'undefined' && window.location.port === '5173') {
+        return 'http://localhost:3000';
+    }
+    return '';
+};
+
+const API_URL = getBaseUrl();
 
 /**
  * Marks attendance for a given roll number.
@@ -126,7 +139,7 @@ export const getServerStatus = async () => {
  */
 export const pingServer = async () => {
     try {
-        await axios.get(`${API_URL}/`);
+        await axios.get(`${API_URL}/api/status`);
         return true;
     } catch (error) {
         return false;

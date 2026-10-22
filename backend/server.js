@@ -273,9 +273,9 @@ async function getCachedRows(forceRefresh = false, customTtl = CACHE_TTL) {
 // ROUTES
 // -------------------------------------------------------------
 
-// Root Health Check
-app.get('/', (req, res) => {
-  res.send('Attendance Backend is Running');
+// System Health Check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Attendance Backend is Running' });
 });
 
 // System Status Endpoint
@@ -681,6 +681,23 @@ app.post('/api/clear-attendance', async (req, res) => {
     }
   }, 60000);
 });
+
+// -------------------------------------------------------------
+// FRONTEND STATIC ASSETS (UNIFIED FULL-STACK DEPLOYMENT)
+// -------------------------------------------------------------
+const distPath = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(distPath)) {
+  console.log(`[STATIC] Unified mode: Serving frontend from ${distPath}`);
+  app.use(express.static(distPath));
+
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.send('Attendance Backend API is Running (Run npm run build to enable full-stack UI)');
+  });
+}
 
 const server = app.listen(PORT, () => {
   console.log(`\n======================================================`);

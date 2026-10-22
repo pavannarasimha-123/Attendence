@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "Smart Attendance System (CSE Department) - Full-Stack QR Code Attendance with Google Sheets & Local Mode fallback",
   "scripts": {
-    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "build": "npm --prefix backend install && npm --prefix frontend install && npm --prefix frontend run build",
     "start": "node backend/server.js",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "server": "node backend/server.js",
     "client": "npm --prefix frontend run dev",
-    "dev": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend run dev\"",
-    "build": "npm --prefix frontend run build"
+    "dev": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend run dev\""
   },
-  "devDependencies": {
+  "dependencies": {
     "concurrently": "^9.1.2"
   }
 }
