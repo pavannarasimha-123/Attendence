@@ -1,82 +1,126 @@
 # Smart Attendance System (CSE Department)
 
-A premium, full-stack web application designed for efficient attendance tracking using QR codes. Optimized for the CSE Department with a modern glassmorphic UI and real-time backend synchronization with Google Sheets.
-
-## 🚀 Key Features
-
-*   **QR Scanner**: High-performance scanner with auto-focus and mobile-optimized flip controls.
-*   **HOD Dashboard**: Real-time "Quick Stats" (Total, Present, Absent) with dynamic filtering by **Semester** and **Branch**.
-*   **Manual Entry**: Fast fallback for roll number entry.
-*   **PDF/CSV Export**: Generate professional attendance reports directly from the dashboard.
-*   **Concurrency Guard**: Built-in Mutex locking and Row Caching to prevent data loss during high traffic.
+A premium, full-stack web application designed for high-throughput attendance tracking using QR codes and spot registration. Optimized for college departments with a modern glassmorphic UI, real-time backend synchronization with Google Sheets, and an automated local database fallback for offline/instant deployment.
 
 ---
 
-## 🛠️ Deployment Guide
+## 🚀 Key Features
 
-### Prerequisites
-- Node.js (v16+)
-- npm or yarn
-- A Google Cloud Service Account (for Sheets API)
+* 📷 **QR Scanner**: Fast real-time camera scanner with continuous autofocus, camera flip support, audio feedback, and queue handling.
+* ✍️ **Manual Entry**: Roll number fallback with direct one-click redirect to Spot Registration if student is not registered.
+* 📝 **Spot Registration**: Add walk-in attendees instantly with Name, Roll Number, Branch, Semester, and Section, with auto-marking as Present.
+* 🪪 **QR Code & Badge Generator**: Generate instant student QR codes (downloadable PNG) and batch-generate printable 2x4 ID badge sheets as formatted PDFs (`jsPDF`).
+* 📊 **HOD Analytics Dashboard**:
+  * Real-time Quick Stats (Total, Present, Absent) with live search and filtering by Semester, Branch, and Attendance Status.
+  * Formatted PDF and CSV / Excel report generation.
+  * Bulk Attendance Reset with security confirmation modal.
+* ⚡ **Dual Storage Architecture**:
+  * **Google Sheets Sync**: Direct integration using Google Service Account JWT & Mutex locking.
+  * **Local Database Fallback**: Automatically switches to local JSON store (`backend/data/students.json`) if Google credentials are not configured, enabling instant zero-setup local runs.
 
-### 1. Google Sheets Setup
-Follow the detailed [Setup Guide](./setup_guide.md) to:
-1.  Create a Google Cloud Project.
-2.  Enable the **Google Sheets API**.
-3.  Create a **Service Account** and download the **JSON Key**.
-4.  Share your Google Sheet with the Service Account email as an **Editor**.
+---
 
-### 2. Backend Configuration
-1.  Navigate to the `backend/` folder.
-2.  Install dependencies: `npm install`.
-3.  Create a `.env` file and add the following:
-    ```env
-    PORT=3000
-    SPREADSHEET_ID=your_id_here
-    GOOGLE_SERVICE_ACCOUNT_EMAIL=your_email_here
-    GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYourKeyHere\n-----END PRIVATE KEY-----"
-    SPOT_REGISTRATION_PASSWORD=your_dashboard_password
-    ```
+## 🚀 Quick Start (One Command)
 
-### 3. Frontend Configuration
-1.  Navigate to the `frontend/` folder.
-2.  Install dependencies: `npm install`.
-3.  Run the development server: `npm run dev`.
+From the root directory:
 
-### 4. Production Build
 ```bash
-# Frontend
-cd frontend
-npm run build
+# 1. Install all dependencies (backend + frontend)
+npm run install:all
 
-# Backend
-cd backend
-node server.js
+# 2. Start both backend and frontend concurrently
+npm run dev
+```
+
+* **Frontend**: [http://localhost:5173](http://localhost:5173)
+* **Backend**: [http://localhost:3000](http://localhost:3000)
+
+### Default Passwords:
+* **HOD / Admin Portal**: `admin123`
+* **Event Coordinator Portal**: `coord123`
+
+*(You can customize passwords in `backend/.env`)*
+
+---
+
+## 🛠️ Configuration & Google Sheets Setup
+
+### Option A: Local Mode (Default / Offline)
+No setup required! The server will automatically use `backend/data/students.json` seeded with sample student data across CSE, AI & DS, and ECE.
+
+### Option B: Google Sheets Sync
+1. Follow the [Google Sheets Setup Guide](./setup_guide.md) to obtain your Service Account JSON key.
+2. Edit `backend/.env`:
+```env
+PORT=3000
+SPREADSHEET_ID=your_google_sheet_id
+GOOGLE_SERVICE_ACCOUNT_EMAIL=attendance-bot@your-project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+SPOT_REGISTRATION_PASSWORD=admin123
+COORDINATOR_PASSWORD=coord123
+USE_LOCAL_STORAGE=false
+```
+3. Share your Google Sheet with the Service Account email as **Editor**.
+4. Restart the server:
+```bash
+npm run dev
 ```
 
 ---
 
-## 📖 Usage Guide
-
-### 🧑‍💻 For Event Coordinators
-1.  **QR Scanner Tab**: Point your camera at the student's ID/QR code. A green success badge will appear once marked.
-2.  **Manual Entry**: Use this if a student's card is damaged.
-
-### 🏛️ For HOD / Administration
-1.  Click **"HOD Login"** at the top right.
-2.  Enter the security password.
-3.  Use the **Semester** and **Branch** dropdowns to filter student data.
-4.  View live counts in the **Quick Stats** panel.
-5.  Click **"Export PDF"** to download a formatted report of the filtered view.
-
----
-
 ## 📁 Project Structure
-- `backend/`: Express server, Google Sheets API integration, and Mutex locking.
-- `frontend/`: React + Tailwind CSS + Vite application.
-- `public/`: Assets like the premium CSE Logo.
+
+```
+Attendence/
+├── package.json                 # Root script runner (dev, install:all, build)
+├── README.md                    # Project documentation
+├── setup_guide.md               # Step-by-step Google Cloud Sheets guide
+├── backend/
+│   ├── data/
+│   │   ├── defaultStudents.json # Initial seed template
+│   │   └── students.json        # Local storage database
+│   ├── server.js                # Express API with Mutex locking & dual storage
+│   ├── package.json             # Backend dependencies
+│   ├── .env.example             # Environment template
+│   └── .env                     # Local configuration
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   ├── RoleSelection.jsx    # Portal selector (Coordinator vs HOD)
+    │   │   ├── CoordinatorLogin.jsx # Coordinator auth
+    │   │   ├── AdminLogin.jsx       # HOD auth, stats, table preview & PDF/CSV export
+    │   │   ├── Scanner.jsx          # Live QR camera scanner
+    │   │   ├── ManualEntry.jsx      # Manual roll number check-in
+    │   │   ├── SpotRegistration.jsx # On-the-spot student registration
+    │   │   ├── QRGenerator.jsx      # Student badge & QR code maker
+    │   │   ├── AttendanceList.jsx   # Live search table & CSV download
+    │   │   ├── ServerWakeup.jsx     # Cloud server connection detector
+    │   │   └── SplashScreen.jsx     # Animated entrance splash
+    │   ├── services/
+    │   │   ├── api.js               # Axios API client
+    │   │   └── scannerService.js    # Camera lifecycle management
+    │   ├── App.jsx                  # Main coordinator layout & tab routing
+    │   └── main.jsx
+    └── package.json                 # Frontend dependencies (React 19, Tailwind, Vite)
+```
 
 ---
 
-## ✅ Final License
+## 📖 User Workflow
+
+1. **Badge Printing (Pre-Event)**:
+   * Event coordinators open the **QR & Badges** tab.
+   * Click **Print All Badges PDF** to generate physical attendee passes with QR codes.
+2. **Event Check-in**:
+   * Coordinators scan student QR passes with the **QR Scanner** tab (or type roll number in **Manual Entry**).
+   * For unregistered or walk-in attendees, coordinators click **Spot Registration** to add them and mark attendance instantly.
+3. **Administration & Reporting**:
+   * Department Heads log in via **HOD Dashboard**.
+   * Filter attendees by semester, branch, and status.
+   * Download official reports as **PDF** or **CSV**.
+   * When an event concludes, use **Reset Attendance** to clear records for the next session.
+
+---
+
+## 📜 License
 &copy; 2026 CSE Department. All Rights Reserved.

@@ -8,6 +8,9 @@ frontend/node_modules/
 backend/.env
 frontend/.env
 
+# Local database runtime files
+backend/data/students.json
+
 # Build outputs
 dist/
 build/

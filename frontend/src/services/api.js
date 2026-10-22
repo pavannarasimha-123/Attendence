@@ -51,9 +51,8 @@ export const getAttendance = async () => {
     }
 };
 
-
 /**
- * Verifies the portal password.
+ * Verifies the portal password (Admin).
  * @param {string} password 
  * @returns {Promise<Object>}
  */
@@ -95,6 +94,33 @@ export const clearAttendance = async (password) => {
 };
 
 /**
+ * Registers a new student on the spot and optionally marks them present.
+ * @param {Object} studentData - { rollNo, name, branch, semester, section, isPresent }
+ * @returns {Promise<Object>}
+ */
+export const registerStudent = async (studentData) => {
+    try {
+        const response = await axios.post(`${API_URL}/api/register-student`, studentData);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.error || 'Registration failed');
+    }
+};
+
+/**
+ * Gets server runtime status and configuration mode.
+ * @returns {Promise<Object>}
+ */
+export const getServerStatus = async () => {
+    try {
+        const response = await axios.get(`${API_URL}/api/status`);
+        return response.data;
+    } catch (error) {
+        return { status: 'offline', mode: 'unknown', totalStudents: 0 };
+    }
+};
+
+/**
  * Pings the server to check if it represents a backend wakeup.
  * @returns {Promise<boolean>}
  */
@@ -106,4 +132,3 @@ export const pingServer = async () => {
         return false;
     }
 };
-

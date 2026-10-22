@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { markAttendance } from '../services/api';
 import scannerService from '../services/scannerService';
 
-const Scanner = ({ onScanSuccess, onScan, autoStart = false, id = "reader-custom" }) => {
+const Scanner = ({ onScanSuccess, onScan, autoStart = false, id = "reader-custom", onNavigateToSpot }) => {
     const [scanResult, setScanResult] = useState(null);
     const [scanError, setScanError] = useState(null);
     const [isScanning, setIsScanning] = useState(false);
@@ -351,6 +351,14 @@ const Scanner = ({ onScanSuccess, onScan, autoStart = false, id = "reader-custom
                         </div>
                         <h3 className="text-lg font-bold text-slate-200 leading-tight mb-2">Coordinator Note</h3>
                         <p className="text-slate-400 font-medium text-sm px-3 py-2 rounded-lg break-normal">{scanError}</p>
+                        {scanError.toLowerCase().includes('not in the system') && onNavigateToSpot && (
+                            <button
+                                onClick={() => onNavigateToSpot(lastScannedCode.current)}
+                                className="mt-3 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                                <span>+</span> Spot Register ({lastScannedCode.current})
+                            </button>
+                        )}
                         <div className="mt-2 text-xs text-slate-500 animate-pulse">Try scanning again</div>
                     </div>
                 </div>

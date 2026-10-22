@@ -1,0 +1,122 @@
+[
+  {
+    "rollNo": "21B01A0501",
+    "name": "Pavan Narasimha",
+    "branch": "CSE",
+    "semester": "Semester 6",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0502",
+    "name": "Aarav Sharma",
+    "branch": "CSE",
+    "semester": "Semester 6",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0503",
+    "name": "Ananya Reddy",
+    "branch": "CSE",
+    "semester": "Semester 6",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0504",
+    "name": "Karthik Verma",
+    "branch": "CSE",
+    "semester": "Semester 6",
+    "section": "B",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0505",
+    "name": "Sneha Kulkarni",
+    "branch": "CSE",
+    "semester": "Semester 6",
+    "section": "B",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0506",
+    "name": "Rohan Deshmukh",
+    "branch": "CSE",
+    "semester": "Semester 4",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0507",
+    "name": "Pooja Nair",
+    "branch": "CSE",
+    "semester": "Semester 4",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0508",
+    "name": "Aditya Joshi",
+    "branch": "AI & DS",
+    "semester": "Semester 6",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0509",
+    "name": "Meera Iyer",
+    "branch": "AI & DS",
+    "semester": "Semester 6",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0510",
+    "name": "Vikram Rathore",
+    "branch": "AI & DS",
+    "semester": "Semester 4",
+    "section": "B",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0511",
+    "name": "Divya Teja",
+    "branch": "ECE",
+    "semester": "Semester 6",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0512",
+    "name": "Siddharth Rao",
+    "branch": "ECE",
+    "semester": "Semester 6",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0513",
+    "name": "Tanvi Gupta",
+    "branch": "ECE",
+    "semester": "Semester 4",
+    "section": "B",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0514",
+    "name": "Nikhil Menon",
+    "branch": "CSE",
+    "semester": "Semester 8",
+    "section": "A",
+    "isPresent": false
+  },
+  {
+    "rollNo": "21B01A0515",
+    "name": "Bhavana Suresh",
+    "branch": "CSE",
+    "semester": "Semester 8",
+    "section": "A",
+    "isPresent": false
+  }
+]

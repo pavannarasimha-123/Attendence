@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { markAttendance } from '../services/api';
 
-const ManualEntry = () => {
+const ManualEntry = ({ onNavigateToSpot }) => {
     const [rollNo, setRollNo] = useState('');
+    const [lastFailedRoll, setLastFailedRoll] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
@@ -14,13 +15,16 @@ const ManualEntry = () => {
         setLoading(true);
         setResult(null);
         setError(null);
+        const currentRoll = rollNo.trim().toUpperCase();
 
         try {
-            const data = await markAttendance(rollNo);
+            const data = await markAttendance(currentRoll);
 
             // Play success sound
-            const audio = new Audio('/sounds/scan_success.mp3');
-            audio.play().catch(e => console.warn("Audio play failed", e));
+            try {
+                const audio = new Audio('/sounds/scan_success.mp3');
+                audio.play().catch(e => console.warn("Audio play failed", e));
+            } catch (e) {}
 
             setResult({
                 message: data.message,
@@ -29,6 +33,7 @@ const ManualEntry = () => {
             setRollNo(''); // Clear input on success
             if (navigator.vibrate) navigator.vibrate(200);
         } catch (err) {
+            setLastFailedRoll(currentRoll);
             setError(err.message);
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         } finally {
@@ -40,7 +45,7 @@ const ManualEntry = () => {
         <div className="w-full max-w-md mx-auto p-6 glass-card rounded-2xl shadow-3xl flex flex-col gap-6 animate-fade-in-up stagger-1">
             <div className="text-center">
                 <h3 className="text-2xl font-bold text-white tracking-wide">Manual Entry</h3>
-                <p className="text-slate-400 text-sm mt-1">Enter Roll Number if QR scan fails</p>
+                <p className="text-slate-400 text-sm mt-1">Enter Roll Number if QR scan fails or camera is unavailable</p>
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -48,10 +53,10 @@ const ManualEntry = () => {
                     <label className="text-slate-400 font-semibold text-xs uppercase tracking-wider ml-1">Roll Number</label>
                     <input
                         type="text"
-                        placeholder="e.g. 21B01A0XXX"
+                        placeholder="e.g. 21B01A0501"
                         value={rollNo}
-                        onChange={(e) => setRollNo(e.target.value)}
-                        className="w-full px-4 py-4 rounded-xl bg-slate-900/50 border border-white/10 text-white text-lg font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:bg-slate-900 transition placeholder:text-slate-600"
+                        onChange={(e) => setRollNo(e.target.value.toUpperCase())}
+                        className="w-full px-4 py-4 rounded-xl bg-slate-900/50 border border-white/10 text-white text-lg font-mono font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:bg-slate-900 transition placeholder:text-slate-600"
                     />
                 </div>
 
@@ -102,6 +107,14 @@ const ManualEntry = () => {
                                     ? "The system is currently syncing multiple records. Please wait a moment and try again."
                                     : error}
                             </p>
+                            {error.toLowerCase().includes('not in the system') && onNavigateToSpot && (
+                                <button
+                                    onClick={() => onNavigateToSpot(lastFailedRoll)}
+                                    className="mt-4 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
+                                >
+                                    <span>+</span> Spot Register ({lastFailedRoll})
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
