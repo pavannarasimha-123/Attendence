@@ -1,5 +1,7 @@
 # Smart Attendance System (CSE Department)
 
+> 🌐 **Live Deployment**: **[https://smart-attendance-ortn.onrender.com/](https://smart-attendance-ortn.onrender.com/)**
+
 A premium, full-stack web application designed for high-throughput attendance tracking using QR codes and spot registration. Optimized for college departments with a modern glassmorphic UI, real-time backend synchronization with Google Sheets, and an automated local database fallback for offline/instant deployment.
 
 ---
@@ -20,7 +22,15 @@ A premium, full-stack web application designed for high-throughput attendance tr
 
 ---
 
-## 🚀 Quick Start (One Command)
+## 🌐 Live Access & Credentials
+
+* **Live App**: [https://smart-attendance-ortn.onrender.com/](https://smart-attendance-ortn.onrender.com/)
+* **Event Coordinator Portal**: Password `coord123`
+* **HOD / Admin Portal**: Password `admin123`
+
+---
+
+## 🚀 Quick Start (Local Development)
 
 From the root directory:
 
@@ -35,12 +45,6 @@ npm run dev
 * **Frontend**: [http://localhost:5173](http://localhost:5173)
 * **Backend**: [http://localhost:3000](http://localhost:3000)
 
-### Default Passwords:
-* **HOD / Admin Portal**: `admin123`
-* **Event Coordinator Portal**: `coord123`
-
-*(You can customize passwords in `backend/.env`)*
-
 ---
 
 ## 🛠️ Configuration & Google Sheets Setup
@@ -54,10 +58,10 @@ No setup required! The server will automatically use `backend/data/students.json
 ```env
 PORT=3000
 SPREADSHEET_ID=your_google_sheet_id
-GOOGLE_SERVICE_ACCOUNT_EMAIL=attendance-bot@your-project.iam.gserviceaccount.com
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-SPOT_REGISTRATION_PASSWORD=admin123
-COORDINATOR_PASSWORD=coord123
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
+GOOGLE_PRIVATE_KEY="your_private_key"
+SPOT_REGISTRATION_PASSWORD=your_admin_password
+COORDINATOR_PASSWORD=your_coordinator_password
 USE_LOCAL_STORAGE=false
 ```
 3. Share your Google Sheet with the Service Account email as **Editor**.
@@ -73,8 +77,10 @@ npm run dev
 ```
 Attendence/
 ├── package.json                 # Root script runner (dev, install:all, build)
+├── render.yaml                  # Render deployment blueprint
 ├── README.md                    # Project documentation
 ├── setup_guide.md               # Step-by-step Google Cloud Sheets guide
+├── deploy_render.md             # Render deployment instructions
 ├── backend/
 │   ├── data/
 │   │   ├── defaultStudents.json # Initial seed template
